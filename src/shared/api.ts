@@ -13,7 +13,7 @@ import type { Restored } from './launch.ts'
  * a read, a stream. The major moves, and the minor returns to 0, when a change breaks a renderer: a rename, a removal, a
  * changed meaning; CHANGELOG.md says why.
  */
-export const API_VERSION = '1.168'
+export const API_VERSION = '1.169'
 
 const id = z.string().min(1)
 
@@ -321,6 +321,12 @@ export const VERBS = {
         "Copy a file the user handed a browser page (dropped or pasted) to the user's own folder in the machine's temp folder, named by its content, and answer its path: what a terminal pastes where a native one pastes a dropped file's own path. Claude takes a pasted image's path as the image. Files up to 20 MB (`UPLOAD_LIMIT`). @since 1.137",
       ),
     reply: z.object({ t: z.literal('uploaded'), path: z.string().describe('Where the copy is: the same bytes always land at the same path.') }),
+  },
+  shutdown: {
+    input: z.object({}).describe(
+      'Stop every daemon as `tower down` does, then shut down the WSL distro the tower runs in: every session and shell ends. Refused unless `board.shutdown` is set.',
+    ),
+    reply: z.object({ t: z.literal('stopping') }),
   },
   'shell/spawn': { input: z.object({ project: id, cwd: id }).describe("Start a login shell in one of the project's directories."), reply: spawned },
   'shell/keys': { input: z.object({ id, data: z.string() }).describe('Keys reach a shell in order, one request at a time.'), reply: ok },

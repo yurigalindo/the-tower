@@ -128,6 +128,7 @@ const VERB_FLOWS: Record<Verb, FlowOf> = {
   keys: single('Type keys', "Write keys to a worker's terminal.", 'named, then written'),
   resize: single('Resize', "Resize a worker's terminal.", 'resized'),
   reap: single('Reap', 'End what a session left running.', 'reaped'),
+  shutdown: single('Shut down Ubuntu', 'Stop the host, terms and tower as `tower down` does, then terminate the WSL distro.', 'stopped, then terminated'),
   'reap/process': single('End a process', 'End one process a session left running.', 'reaped'),
   open: single('Open', 'Open a project directory in the editor.', 'opened'),
   reveal: single('Reveal', 'Show a file or folder in Finder.', 'revealed'),

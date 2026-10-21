@@ -12,6 +12,7 @@ import { bucketStart } from '../bridge/stats.ts'
 import { projectLegacy } from '../bridge/legacy.ts'
 import { API_VERSION, apiError, type ApiError } from '../shared/api.ts'
 import type { BoardMsg } from '../shared/shelf-page.ts'
+import { wslDistro } from '../machine.ts'
 import type { Config } from '../shared/model.ts'
 import { renderersOf } from '../renderers.ts'
 import { frozen } from '../bridge/frozen.ts'
@@ -147,7 +148,7 @@ export const publisher = defineResource({
       folding = true
       try {
         const folded = foldBoard({ board: core, callsignOf: callsignLookup(view), folders: extensions.folders(), subjects: extensions.subjects(), now: view.now, clock: () => performance.now() })
-        return projectLegacy({ ...folded.board, extensions: extensions.folded(folded.problems, view.now) })
+        return projectLegacy({ ...folded.board, extensions: extensions.folded(folded.problems, view.now), ...(wslDistro() && { shutdown: true as const }) })
       } finally {
         folding = false
       }

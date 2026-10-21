@@ -25,7 +25,7 @@ import { editConfig, keyName, type ConfigEdit } from '../config-edit.ts'
 import { createItem, deleteItem, itemPath, itemVersion, restoreItem, writeItem } from '../collections.ts'
 import { logged } from '../logged.ts'
 import { thrownWords } from '../shared/thrown.ts'
-import { hostRequest, jobsRequest, pressSubmit, reap, reveal, runEditor, submitText, termsRequest, typeText, writeUpload } from '../machine.ts'
+import { hostRequest, jobsRequest, pressSubmit, reap, reveal, runEditor, shutDown, submitText, termsRequest, typeText, writeUpload, wslDistro } from '../machine.ts'
 import { apiError, isApiError, ITEM_EXT, ROUTES, VERBS, type ApiError, type Replies, type Route, type RouteInput, type SpawnGate } from '../shared/api.ts'
 import { callsignRefused, freshId, nameIn, typedCallsign } from '../shared/callsign.ts'
 import { callOf, can, hireRefusal, workerNamed } from '../shared/cards.ts'
@@ -989,6 +989,10 @@ export const dispatch = defineResource({
       reap: ({ id }) => reapSession(id),
       'reap/process': ({ id, pid }) => reapProcess(id, pid),
       open: ({ dir }) => openDir(dir),
+      shutdown: () => {
+        const distro = wslDistro()
+        return distro ? (shutDown(distro), { t: 'stopping' as const }) : apiError('refused', 'Shutting down is offered only where the tower runs in WSL')
+      },
       reveal: ({ path: target }) => onPath(target, reveal),
       edit: ({ path: target, line }) =>
         onPath(target, (file) => (line === undefined ? inEditor('open', { path: file }) : inEditor('goto', { path: file, line: String(line) }))),

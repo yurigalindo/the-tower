@@ -12,7 +12,7 @@ import { run as runGit } from './git.ts'
 import { parseListening, parseProcesses, peers, resources, type ClaudeRegistration, type Peer, type Process, type Resource } from './bridge/resources.ts'
 import { connectHost, connectJobs, connectTerms } from './shared/client.ts'
 import { withoutParentSession } from './shared/env.ts'
-import { platform } from './platform.ts'
+import { detected, platform } from './platform.ts'
 import type { SystemPaths } from './shared/model.ts'
 import { answers } from './shared/socket.ts'
 import { promptPastes, SUBMIT_KEY, type FromHost, type HostLive, type ToAnyHost } from './shared/protocol.ts'
@@ -407,4 +407,19 @@ export const bringAllDown = async (picked: Daemon[]): Promise<Array<[Daemon, 'st
   const results: Array<[Daemon, 'stopped' | 'not running' | Error]> = []
   for (const daemon of [...picked].reverse()) results.push([daemon, await bringDown(daemon).catch((err: Error) => err)])
   return results
+}
+
+/** After a pause for the reply to reach the page: `tower down`, then the distro's end even if a daemon refused to stop: the user asked for Ubuntu off. */
+const SHUTDOWN_SCRIPT = 'sleep 1 && "$0" --import tsx "$1/src/cli.ts" down; /mnt/c/Windows/System32/wsl.exe --terminate "$2"'
+
+/** The command that stops the daemons as `tower down` does, then terminates the WSL distro `distro`; `node` runs the CLI of `repo`. */
+export const shutdownCommand = (node: string, repo: string, distro: string): { file: string; args: string[] } => ({ file: 'bash', args: ['-c', SHUTDOWN_SCRIPT, node, repo, distro] })
+
+/** The WSL distro the tower runs in, which it can shut down from inside; `undefined` on any other platform. */
+export const wslDistro = (): string | undefined => (detected()?.name === 'WSL' ? process.env.WSL_DISTRO_NAME : undefined)
+
+/** Starts `shutdownCommand` in a session of its own, so it outlives the tower it stops. */
+export const shutDown = (distro: string): void => {
+  const { file, args } = shutdownCommand(process.execPath, REPO, distro)
+  spawn(file, args, { cwd: REPO, detached: true, stdio: 'ignore' }).unref()
 }

@@ -1470,6 +1470,12 @@ test('server: what comes from outside the tower is refused', async () => {
   assert.equal(errorCode(await post('no/verb', {})), 'not_found')
 })
 
+test('server: shutdown is refused outside WSL, and from outside the tower', async () => {
+  // The tower under test runs without WSL_DISTRO_NAME, so this can never be an accepted request.
+  assert.equal(errorCode(await post('shutdown', {})), 'refused')
+  assert.equal((await request('/shutdown', { method: 'POST', headers: { 'content-type': 'application/json' } }, '{}')).status, 403)
+})
+
 test("server: a name in the config's hosts reaches the tower, and its POSTs carry its own Origin", async () => {
   const named = `lab.localhost:${new URL(base).port}`
   const draft = JSON.stringify({ project: 'lab', collection: 'drafts', ext: 'md', content: '' })

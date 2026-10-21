@@ -230,6 +230,8 @@ body:has(.crew-group.dragged) .tower-tip { visibility: hidden; }
 .side-renderers b { color: var(--ink); }
 .side-renderers a { color: var(--muted); text-decoration: none; }
 .side-renderers a:hover { color: var(--ink); }
+.side-foot .shutdown { display: inline-flex; align-items: center; gap: var(--sp-xs); flex: none; margin-left: auto; min-height: var(--control); padding: 0 var(--sp-s); border: 1px solid transparent; border-radius: var(--radius); background: none; color: var(--muted); font-size: var(--fs-xs); cursor: pointer; }
+.side-foot .shutdown:hover { color: var(--ink); border-color: var(--line); background: var(--panel); }
 .side-foot code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--fs-xs) var(--mono); direction: rtl; text-align: left; }
 .main { grid-column: 2; }
 .rail { display: none; flex-direction: column; align-items: center; gap: var(--sp-l); padding: var(--sp-l) 0; overflow-y: auto; scrollbar-width: none; }
@@ -429,6 +431,8 @@ dialog.sheet header .icon-btn { flex: none; font-size: var(--fs-m); }
 .board-error b { display: block; margin-bottom: var(--sp-2xs); }
 .board-error:empty { display: none; }
 .board-error small { display: block; margin-top: var(--sp-xs); color: var(--muted); }
+.shut-down { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: var(--sp-2xl); background: var(--wall); color: var(--muted); font-size: var(--fs-l); text-align: center; }
+.shut-down[hidden] { display: none; }
 body.lost :is(#host, #tally, #limits-bar, #floors, #rail, #main, [data-view="tower/skyline"], #tabs) { filter: grayscale(1); opacity: .55; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 </style>
@@ -485,6 +489,14 @@ body.lost :is(#host, #tally, #limits-bar, #floors, #rail, #main, [data-view="tow
     <div class="patterns" id="patterns-list"></div>
   </form>
 </dialog>
+<dialog id="shutdown" aria-labelledby="shutdown-title">
+  <form method="dialog">
+    <h2 id="shutdown-title">Shut down Ubuntu?</h2>
+    <p>The Tower stops cleanly first. Any running workers will end — you can resume them later.</p>
+    <div class="actions"><button value="yes">Shut down</button><button value="" autofocus>Cancel</button></div>
+  </form>
+</dialog>
+<div class="shut-down" id="shut-down" role="status" hidden>Ubuntu is shut down. Click the Tower icon to start it again.</div>
 <div id="toasts"></div>
 <div class="sr-only" id="announce" role="status"></div>
 <div class="board-error" id="board-error" role="alert"></div>

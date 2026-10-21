@@ -89,6 +89,7 @@
  *   POST /probe/run {name}   deprecated: the quota probe read now, through quota/read-now (LEGACY, src/bridge/legacy.ts)
  *   POST /reap {id}     end what the session left running;  /reap/process {id, pid}  one of those processes
  *   POST /open {dir}    open a project directory in a new window of the user's editor
+ *   POST /shutdown     WSL only: stop the host, terms and tower as `tower down` does, then terminate the distro
  *   POST /reveal {path} | /edit {path, line?}   show a path the system names in Finder, or open it in the user's editor
  *   POST /<capability>/<verb>   an extension's verb;  GET /<capability>/<read>  an extension's read (src/tower/calls.ts)
  *
