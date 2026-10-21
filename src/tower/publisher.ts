@@ -12,6 +12,7 @@ import { foldBoard, SLOW_MS } from '../bridge/folds.ts'
 import { bucketStart } from '../bridge/stats.ts'
 import { API_VERSION, apiError, type ApiError } from '../shared/api.ts'
 import type { BoardMsg } from '../shared/shelf-page.ts'
+import { wslDistro } from '../machine.ts'
 import type { Config } from '../shared/model.ts'
 import { renderersOf } from '../renderers.ts'
 import { contributedRenderers } from '../bridge/extensions.ts'
@@ -167,7 +168,7 @@ export const publisher = defineResource({
       folding = true
       try {
         const folded = foldBoard({ board: core, callsignOf: callsignLookup(view), folders: extensions.folders(), subjects: extensions.subjects(), now: view.now, clock: () => performance.now() })
-        return { ...folded.board, extensions: extensions.folded(folded.problems, view.now) }
+        return { ...folded.board, extensions: extensions.folded(folded.problems, view.now), ...(wslDistro() && { shutdown: true as const }) }
       } finally {
         folding = false
       }

@@ -13,7 +13,7 @@ import { wireSpawn } from '/lib/spawn.js'
 import '/lib-ui/combobox.js'
 import { STATS_ALL } from '/lib/stats.js'
 import { loadTerminalFont } from '/lib/terminal.js'
-import { pressOf, copyTelling, fileButtonsHtml, fileCall, itemsCss, morphPanel, panelsCss, pressing, pressingAs } from '/lib/view.js'
+import { pressOf, copyTelling, fileButtonsHtml, fileCall, ICON, itemsCss, morphPanel, panelsCss, pressing, pressingAs } from '/lib/view.js'
 import { readViewer, seenMarker, seenOf, VIEWER_KEYS } from '/lib/viewer.js'
 import { ago, esc, plural } from '/lib/words.js'
 import { domId } from '/lib/morph.js'
@@ -125,7 +125,8 @@ function render() {
   drawSideView()
   morphPanel($('rail'), railHtml(waiting))
   extensionsFoot.paint()
-  morphPanel($('side-foot'), board().config ? `<span>config</span><code data-tip="${esc(board().config)}"><bdi>${esc(board().config)}</bdi></code>${fileButtonsHtml(board().config)}` : '')
+  morphPanel($('side-foot'), (board().config ? `<span>config</span><code data-tip="${esc(board().config)}"><bdi>${esc(board().config)}</bdi></code>${fileButtonsHtml(board().config)}` : '') +
+    (board().shutdown ? `<button class="shutdown" data-shutdown data-tip="stop the tower, then shut down Ubuntu">${ICON.power}Shut down Ubuntu</button>` : ''))
   mainRegion.update()
   renderDock()
   drawSettings()
@@ -1639,6 +1640,8 @@ document.addEventListener('click', async (e) => {
   if (range) return (keepViewer('statsRange', range), sideView.dispatch({ type: 'range', range }))
   if (target.closest('[data-stats-read]')) return sideView.dispatch({ type: 'retry' })
   if (target.closest('[data-keys]')) return showKeys()
+  const shutdown = target.closest('[data-shutdown]')
+  if (shutdown) return askShutdown(shutdown)
   const added = target.closest('[data-added]')
   if (added) return runAddedAt(added, JSON.parse(/** @type {string} */ (added.dataset.added)))
   const opened = target.closest('[data-open-view]')?.dataset.openView
@@ -1702,7 +1705,7 @@ document.fonts.addEventListener('loadingdone', () => placedRegions.forEach((r) =
 // A view or a framed page set a key the viewer's record keeps, such as a dismissal.
 tower.store.on(() => void rereadViewer().then(render))
 
-const isTyping = () => ['INPUT', 'TEXTAREA', 'SELECT'].includes(/** @type {string} */ (document.activeElement?.tagName)) || asking() || $('spawn').open || $('keys').open || $('landing').open || $('palette').open || $('patterns').open || Boolean(document.querySelector('[data-view] dialog[open]'))
+const isTyping = () => ['INPUT', 'TEXTAREA', 'SELECT'].includes(/** @type {string} */ (document.activeElement?.tagName)) || asking() || $('spawn').open || $('keys').open || $('landing').open || $('shutdown').open || $('palette').open || $('patterns').open || Boolean(document.querySelector('[data-view] dialog[open]'))
 
 /** The keymap's command for each of the core's tabs of a worker, and the view each opens. */
 const PANE_COMMAND = /** @type {Partial<Record<string, string>>} */ (Object.fromEntries(PANES.map((p) => [p.command, p.view])))
@@ -1839,11 +1842,27 @@ addEventListener('pointerdown', () => (enterGuard = undefined), true)
 /** xterm measures its cells when it opens: the terminal face must be loaded by then. */
 await loadTerminalFont(termFont())
 
+/** Whether Ubuntu was told to shut down: the tower then goes quiet by design, and the page says so instead of reporting it lost. */
+let stopped = false
+
+/** Asks first, cancel the default; on yes the page says Ubuntu is shut down, over the lost tower's error. A refusal is toasted with the server's reason. @param {Element} button */
+async function askShutdown(button) {
+  const dialog = $('shutdown')
+  dialog.returnValue = ''
+  const sure = new Promise((resolve) => dialog.addEventListener('close', () => resolve(dialog.returnValue === 'yes'), { once: true }))
+  dialog.showModal()
+  if (!(await sure)) return
+  if (!(await told(pressing(button, () => tower.call('shutdown', {}))))) return
+  stopped = true
+  $('shut-down').hidden = false
+  showBoardError()
+}
+
 /** The board's failure stays on screen over the last board drawn, until the tower sends a board again. */
 function showBoardError() {
   const { error, lostAt } = page.state()
   document.body.classList.toggle('lost', lostAt !== undefined)
-  $('board-error').innerHTML = !error ? '' : `<b>${boardErrorTitle(error.code)}</b>${esc(error.message)}${
+  $('board-error').innerHTML = !error || stopped ? '' : `<b>${boardErrorTitle(error.code)}</b>${esc(error.message)}${
     lostAt ? `<small>what you see is how it stood at ${new Date(lostAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>` : ''}`
 }
 
