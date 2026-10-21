@@ -249,6 +249,12 @@ test('server: what comes from outside the tower is refused', async () => {
   assert.equal(errorCode(await post('no/verb', {})), 'not_found')
 })
 
+test('server: shutdown is refused outside WSL, and from outside the tower', async () => {
+  // The tower under test runs without WSL_DISTRO_NAME, so this can never be an accepted request.
+  assert.equal(errorCode(await post('shutdown', {})), 'refused')
+  assert.equal((await request('/shutdown', { method: 'POST', headers: { 'content-type': 'application/json' } }, '{}')).status, 403)
+})
+
 /** Only the length is sent: the tower refuses on it and closes, and a body sent after would race that close. */
 test('server: a body declared past 8 MiB is refused as invalid', async () => {
   const reply = await request('/collection/create', { method: 'POST', headers: { origin: base, 'content-type': 'application/json', 'content-length': 8 * 1024 * 1024 + 1 } })

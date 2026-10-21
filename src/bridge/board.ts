@@ -290,6 +290,8 @@ export type Board = {
   user: { name: string }
   /** The config file's path: the system root, where the logs and collections are, is its directory. */
   config: string
+  /** Set by the tower when it runs in a WSL distro, where `shutdown` is accepted. */
+  shutdown?: true
   /** Every command's chords by id, the config's `keys` over the keymap's defaults (`/keymap.js`). */
   keys: Keys
   floors: Floor[]

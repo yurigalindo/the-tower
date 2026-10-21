@@ -18,6 +18,9 @@ const without = (env: NodeJS.ProcessEnv, drops: (key: string) => boolean): Recor
 
 export const withoutParentSession = (env: NodeJS.ProcessEnv): Record<string, string> => without(env, isParentSessionVar)
 
+/** Whether the process runs in a WSL distro, which the machine can shut down from inside. */
+export const inWsl = (platform: string = process.platform, env: NodeJS.ProcessEnv = process.env): boolean => platform === 'linux' && !!env.WSL_DISTRO_NAME
+
 /**
  * The terminal a process was started from names itself in its environment, and programs tune themselves to it:
  * Claude reads `TERM_PROGRAM=vscode` or Cursor's askpass path as an editor's xterm.js and changes how it scrolls,

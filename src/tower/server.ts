@@ -55,6 +55,7 @@
  *   POST /probe/run {name}   read a probe now (refused while off, while a read is in flight or within 60 s of the last start)
  *   POST /reap {id}     end what the session left running;  /reap/process {id, pid}  one of those processes
  *   POST /open {dir}    open a project directory in a new window of the user's editor
+ *   POST /shutdown     WSL only: stop the host, terms and tower as `tower down` does, then terminate the distro
  *   POST /reveal {path} | /edit {path, line?}   show a path the system names in Finder, or open it in the user's editor
  *
  * Every command's body, up to 8 MiB, is parsed by its schema in src/shared/api.ts. A failure, of a command or a read, answers
@@ -69,7 +70,8 @@ import { briefOf } from '../bridge/turns.ts'
 import { withLiveness } from '../bridge/status.ts'
 import { isLive } from '../bridge/verbs.ts'
 import { HIRED, KEYED_BY, KILLED_BY, LET_GO, leavesNow, PROMPTED_BY, type Session } from '../bridge/facts.ts'
-import { hostRequest, revealInFinder, originUrl, reap, runEditor, submitText, termsRequest } from '../machine.ts'
+import { hostRequest, revealInFinder, originUrl, reap, runEditor, shutDown, submitText, termsRequest } from '../machine.ts'
+import { inWsl } from '../shared/env.ts'
 import { changesIn } from '../changes.ts'
 import { readLanded } from '../landed.ts'
 import { createItem, deleteItem, itemPath, renameItem, itemVersion, putItem, readItem, restoreItem, writeItem } from '../collections.ts'
@@ -224,7 +226,7 @@ const currentBoard = (): string => {
 
 const policiesNow = (): Policies => ({ files: system.policies(), facts: system.policyFacts() })
 
-const boardOf = () => board(readConfig(), system.sessions(), system.live(), system.running(), system.peers(), system.shells(), system.items(), system.threads(), system.repos(), system.logs(), system.probes(), system.streamMonths(), policiesNow(), paths, Date.now())
+const boardOf = () => ({ ...board(readConfig(), system.sessions(), system.live(), system.running(), system.peers(), system.shells(), system.items(), system.threads(), system.repos(), system.logs(), system.probes(), system.streamMonths(), policiesNow(), paths, Date.now()), ...(inWsl() && { shutdown: true as const }) })
 
 /** Every session's card, the ones the board leaves out included. */
 const everyCard = (now: number) => allCards(readConfig(), system.sessions(), system.live(), system.running(), system.peers(), system.shells(), system.threads(), system.repos(), policiesNow(), now)
@@ -1331,6 +1333,7 @@ const HANDLERS: { [R in Route]: (input: RouteInput[R]) => Answer | Promise<Answe
   reap: ({ id }) => reapSession(id),
   'reap/process': ({ id, pid }) => reapProcess(id, pid),
   open: ({ dir }) => openDir(dir),
+  shutdown: () => (inWsl() ? (shutDown(process.env.WSL_DISTRO_NAME!), { t: 'stopping' as const }) : apiError('refused', 'Shutting down is offered only where the tower runs in WSL')),
   reveal: ({ path: target }) => onPath(target, revealInFinder),
   edit: ({ path: target, line }) =>
     onPath(target, (file) => (line === undefined ? inEditor('open', { path: file }) : inEditor('goto', { path: file, line: String(line) }))),

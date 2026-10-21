@@ -1,4 +1,5 @@
 import { terminalTheme } from '/design.js'
+import { ICON } from '/icons.js'
 import { ATTENTION_MEANS, ATTENTION_NAME, HOST_ATTENTION, HOST_MEANS, HOST_NAME, ON_DUTY_MEANS, WAITING_MEANS, WAITING_NAME, hostState, loudest, SOUNDS, attentionOrder, heededOffers, heededWaits, isOffer, nextAttended, claudeUntestedHtml, boardErrorTitle, tidiedLine, discardAsk, discardedLine, probedLine, ago, callOf, noLongerOffered, offeredCall, esc, neighbours, strandedOf, letGoAsk, letGoneLine, resumeAllAsk, resumeStranded, reapAsk, killShellAsk, tidyAllAsk, WORKTREE_ASK, WORKTREE_DONE, keptLine } from '/cards.js'
 import { itemKind, itemsCss, keptOf, readsText } from '/items.js'
 import { threadWant, panelsCss, STATS_ALL, fileButtonsHtml, fileCall, keepingFocus, cardThread } from '/panels.js'
@@ -104,7 +105,8 @@ function render() {
   keepingFocus(floors, () => redrawHeld(floors, floorsTopDown().map(floorHtml).join(''), sightAnchorOf(floors, selected()) ?? topAnchorOf(floors)))
   drawSideView()
   repaint($('rail'), railHtml(waiting))
-  $('side-foot').innerHTML = board().config ? `<span>config</span><code data-tip="${esc(board().config)}"><bdi>${esc(board().config)}</bdi></code>${fileButtonsHtml(board().config)}` : ''
+  $('side-foot').innerHTML = (board().config ? `<span>config</span><code data-tip="${esc(board().config)}"><bdi>${esc(board().config)}</bdi></code>${fileButtonsHtml(board().config)}` : '') +
+    (board().shutdown ? `<button class="shutdown" data-shutdown data-tip="stop the tower, then shut down Ubuntu">${ICON.power}Shut down Ubuntu</button>` : '')
   const c = selected() && findCard(selected())
   followChanges(c || undefined)
   if (c) barHtml(c)
@@ -518,6 +520,8 @@ document.addEventListener('click', (e) => {
   if (range) return (keepViewer('statsRange', range), sideView.dispatch({ type: 'range', range }))
   if (target.closest('[data-stats-read]')) return sideView.dispatch({ type: 'retry' })
   if (target.closest('[data-keys]')) return showKeys()
+  const shutdown = target.closest('[data-shutdown]')
+  if (shutdown) return askShutdown(shutdown)
   const dismissed = target.closest('[data-dismiss]')?.dataset.dismiss
   if (dismissed) return dismissWait(dismissed)
   const offerDismissed = target.closest('[data-offer-dismiss]')?.dataset.offerDismiss
@@ -623,7 +627,7 @@ function applyScheme() {
 tower.onScheme(applyScheme)
 tower.prefs.on(() => (applyTermFont(), redrawDocs(), sendScheme(), drawSettings()))
 
-const isTyping = () => ['INPUT', 'TEXTAREA', 'SELECT'].includes(/** @type {string} */ (document.activeElement?.tagName)) || $('spawn').open || $('transfer').open || $('keys').open || $('landing').open
+const isTyping = () => ['INPUT', 'TEXTAREA', 'SELECT'].includes(/** @type {string} */ (document.activeElement?.tagName)) || $('spawn').open || $('transfer').open || $('keys').open || $('landing').open || $('shutdown').open
 
 /** Shows a pane the selected worker has, with focus in its terminal or on its tab, from where Tab enters it. */
 /** @param {Pane} pane */
@@ -658,11 +662,27 @@ document.addEventListener('keydown', (e) => {
 /** xterm measures its cells when it opens: the terminal face must be loaded by then. */
 await loadTerminalFont(termFont())
 
+/** Whether Ubuntu was told to shut down: the tower then goes quiet by design, and the page says so instead of reporting it lost. */
+let stopped = false
+
+/** Asks first, cancel the default; on yes the page says Ubuntu is shut down, over the lost tower's error. A refusal is toasted with the server's reason. @param {Element} button */
+async function askShutdown(button) {
+  const dialog = $('shutdown')
+  dialog.returnValue = ''
+  const sure = new Promise((resolve) => dialog.addEventListener('close', () => resolve(dialog.returnValue === 'yes'), { once: true }))
+  dialog.showModal()
+  if (!(await sure)) return
+  if (!(await told(pressing(button, () => tower.call('shutdown', {}))))) return
+  stopped = true
+  $('shut-down').hidden = false
+  showBoardError()
+}
+
 /** The board's failure stays on screen over the last board drawn, until the tower sends a board again. */
 function showBoardError() {
   const { error, lostAt } = page.state()
   document.body.classList.toggle('lost', lostAt !== undefined)
-  $('board-error').innerHTML = !error ? '' : `<b>${boardErrorTitle(error.code)}</b>${esc(error.message)}${
+  $('board-error').innerHTML = !error || stopped ? '' : `<b>${boardErrorTitle(error.code)}</b>${esc(error.message)}${
     lostAt ? `<small>what you see is how it stood at ${new Date(lostAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>` : ''}`
 }
 

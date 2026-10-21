@@ -47,6 +47,7 @@ export const ICON = {
   globe: stroke('<circle cx="8" cy="8" r="6.2"/><path d="M1.8 8h12.4M8 1.8c-3.2 3.4-3.2 9 0 12.4M8 1.8c3.2 3.4 3.2 9 0 12.4"/>'),
   music: stroke('<path d="M6 12V3.2l7-1.4v8.7"/><circle cx="4.2" cy="12" r="1.8" fill="currentColor"/><circle cx="11.2" cy="10.5" r="1.8" fill="currentColor"/>'),
   silent: stroke('<path d="M6 12V3.2l7-1.4v8.7"/><circle cx="4.2" cy="12" r="1.8" fill="currentColor"/><circle cx="11.2" cy="10.5" r="1.8" fill="currentColor"/><path d="m1.5 1.5 13 13"/>'),
+  power: stroke('<path d="M8 1.8v5.4"/><path d="M4.6 3.9a5.4 5.4 0 1 0 6.8 0"/>', 1.5),
   tower: stroke('<path d="M4 14.5V2.5h8v12M2.5 14.5h11"/><path d="M6 5h1M9 5h1M6 8h1M9 8h1M6 11h1M9 11h1"/>', 1.4),
 }
 

@@ -341,3 +341,15 @@ export const bringAllDown = async (picked: Daemon[]): Promise<Array<[Daemon, 'st
   for (const daemon of [...picked].reverse()) results.push([daemon, await bringDown(daemon).catch((err: Error) => err)])
   return results
 }
+
+/** After a pause for the reply to reach the page: `tower down`, then the distro's end even if a daemon refused to stop: the user asked for Ubuntu off. */
+const SHUTDOWN_SCRIPT = 'sleep 1 && "$0" --import tsx "$1/src/cli.ts" down; /mnt/c/Windows/System32/wsl.exe --terminate "$2"'
+
+/** The command that stops the daemons as `tower down` does, then terminates the WSL distro `distro`; `node` runs the CLI of `repo`. */
+export const shutdownCommand = (node: string, repo: string, distro: string): { file: string; args: string[] } => ({ file: 'bash', args: ['-c', SHUTDOWN_SCRIPT, node, repo, distro] })
+
+/** Starts `shutdownCommand` in a session of its own, so it outlives the tower it stops. */
+export const shutDown = (distro: string): void => {
+  const { file, args } = shutdownCommand(process.execPath, REPO, distro)
+  spawn(file, args, { cwd: REPO, detached: true, stdio: 'ignore' }).unref()
+}

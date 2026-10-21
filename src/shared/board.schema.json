@@ -61,6 +61,11 @@
           "type": "string",
           "description": "The config file's path: the system root, where the logs and collections are, is its directory."
         },
+        "shutdown": {
+          "type": "boolean",
+          "const": true,
+          "description": "Set by the tower when it runs in a WSL distro, where `shutdown` is accepted."
+        },
         "keys": {
           "$ref": "#/definitions/Keys",
           "description": "Every command's chords by id, the config's `keys` over the keymap's defaults (`/keymap.js`)."
