@@ -40,9 +40,12 @@ const ran = async (file: string, args: string[]): Promise<Ran | undefined> => {
 }
 
 const macos = (): Verdict =>
-  process.platform === 'darwin'
-    ? { level: 'ok', what: 'macOS' }
-    : { level: 'fail', what: `${process.platform}: the tower runs on macOS only`, fix: 'run it on a Mac (it reads ps -E, lsof and launchd re-parenting)' }
+  process.platform === 'darwin' || process.platform === 'linux'
+    ? { level: 'ok', what: process.platform === 'darwin' ? 'macOS' : 'Linux' }
+    : { level: 'fail', what: `${process.platform}: the tower runs on macOS and Linux only`, fix: 'run it on a Mac or in Linux (it reads ps environments, lsof and re-parenting)' }
+
+/** The fix for a missing tool: the Mac's command line tools, or the distro's package. */
+const install = (mac: string, apt: string): string => (process.platform === 'linux' ? apt : mac)
 
 const node = (): Verdict =>
   Number(process.versions.node.split('.')[0]) >= NODE_MAJOR
@@ -56,13 +59,13 @@ const onPath = async (command: string, args: string[], fix: string): Promise<Ver
 
 const gitVersion = async (): Promise<Verdict> => {
   const run = await ran('git', ['--version'])
-  if (!run) return { level: 'fail', what: 'git is not on the PATH', fix: 'xcode-select --install' }
+  if (!run) return { level: 'fail', what: 'git is not on the PATH', fix: install('xcode-select --install', 'sudo apt install git') }
   const what = run.stdout.trim()
   const [major, minor] = (/(\d+)\.(\d+)/.exec(what) ?? []).slice(1).map(Number)
   const [wantMajor, wantMinor] = GIT_MINIMUM
   return major > wantMajor || (major === wantMajor && minor >= wantMinor)
     ? { level: 'ok', what }
-    : { level: 'fail', what: `${what}, older than ${GIT_MINIMUM.join('.')}`, fix: 'brew install git, or update the Command Line Tools: xcode-select --install' }
+    : { level: 'fail', what: `${what}, older than ${GIT_MINIMUM.join('.')}`, fix: install('brew install git, or update the Command Line Tools: xcode-select --install', 'sudo apt install git') }
 }
 
 const claudeVersion = async (): Promise<Verdict> => {
@@ -182,7 +185,7 @@ export const readiness = async (paths: SystemPaths): Promise<Verdict[]> => {
     await claudeVersion(),
     await claudeSignedIn(),
     await gitVersion(),
-    await onPath('curl', ['--version'], 'xcode-select --install'),
+    await onPath('curl', ['--version'], install('xcode-select --install', 'sudo apt install curl')),
     writable(paths),
     configValid(paths, config),
     await editor(config),

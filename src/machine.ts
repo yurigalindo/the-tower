@@ -77,6 +77,9 @@ export const termsShells = async (paths: SystemPaths): Promise<Shell[] | undefin
 /** With no host running, nothing is live. */
 export const liveIds = async (paths: SystemPaths): Promise<Set<string>> => (await hostLive(paths))?.ids ?? new Set()
 
+/** `ps` appends a process's environment to its command with `-E` on macOS, `e` on Linux. */
+const ENV_FLAG = process.platform === 'linux' ? 'e' : '-E'
+
 /** The full environment of every process runs to hundreds of KB. */
 const run = async (file: string, args: string[]): Promise<string> =>
   (await promisify(execFile)(file, args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })).stdout
@@ -97,7 +100,7 @@ const HOST_SCRIPT = path.join(import.meta.dirname, 'host', 'main.ts')
 export type ProcessScan = { procs: Process[]; hosts: Set<number> }
 
 export const scanProcesses = async (): Promise<ProcessScan> => {
-  const procs = parseProcesses(...(await Promise.all([run('ps', ['-A', '-ww', '-o', 'pid=,ppid=,command=']), run('ps', ['-A', '-ww', '-E', '-o', 'pid=,command='])])))
+  const procs = parseProcesses(...(await Promise.all([run('ps', ['-A', '-ww', '-o', 'pid=,ppid=,command=']), run('ps', ['-A', '-ww', ENV_FLAG, '-o', 'pid=,command='])])))
   return { procs, hosts: new Set(procs.filter((proc) => proc.command.endsWith(HOST_SCRIPT)).map((proc) => proc.pid)) }
 }
 
@@ -170,8 +173,13 @@ export const originUrl = async (dir: string): Promise<string | undefined> => {
   }
 }
 
-/** Shows `target` selected in a Finder window. */
+/** Shows `target` selected in a Finder window; on Linux (WSL), in an Explorer window, which exits 1 even when it opens. */
 export const revealInFinder = async (target: string): Promise<void> => {
+  if (process.platform === 'linux') {
+    const windows = (await promisify(execFile)('wslpath', ['-w', target], { encoding: 'utf8' })).stdout.trim()
+    await promisify(execFile)('explorer.exe', [`/select,${windows}`]).catch(() => {})
+    return
+  }
   await promisify(execFile)('open', ['-R', target])
 }
 
@@ -208,12 +216,12 @@ const listenerOn = async (port: number): Promise<number | undefined> => {
 }
 
 /**
- * Whether a daemon process serves `config`, read from its environment the way `configPath` reads it. `ps -E` runs a
+ * Whether a daemon process serves `config`, read from its environment the way `configPath` reads it. `ps -E` (`ps e` on Linux) runs a
  * command into its environment with nothing between values, so the environment is searched for this config's own
  * entries, spaces in paths included.
  */
 const servesConfig = async (pid: number, config: string): Promise<boolean> => {
-  const env = `${await run('ps', ['-E', '-ww', '-o', 'command=', '-p', String(pid)])} `.replace(/\n/g, ' ')
+  const env = `${await run('ps', [ENV_FLAG, '-ww', '-o', 'command=', '-p', String(pid)])} `.replace(/\n/g, ' ')
   if (env.includes(' TOWER_CONFIG=')) return env.includes(` TOWER_CONFIG=${config} `)
   const home = path.dirname(path.dirname(config))
   return config === path.join(home, '.tower', 'config.json') && env.includes(` HOME=${home} `)
