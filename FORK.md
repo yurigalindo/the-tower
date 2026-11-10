@@ -1,6 +1,6 @@
 # This fork
 
-`yurigalindo/the-tower`: RegiByte's tower plus two commits for running it from Windows 11. Upstream runs on WSL 2
+`yurigalindo/the-tower`: RegiByte's tower plus a few commits for running it from Windows 11. Upstream runs on WSL 2
 itself since v1.80.0 (`src/platform.ts`, decision `platforms`); this fork adds only what a Windows user of it wants
 beyond that. Nothing here changes how the tower behaves on a Mac.
 
@@ -13,6 +13,7 @@ beyond that. Nothing here changes how the tower behaves on a Mac.
   2. Shut down Ubuntu: `POST /shutdown` (the API's minor +1) and `board.shutdown`, a button in the sidebar's footer;
      stops the tower cleanly, then `wsl.exe --terminate <distro>`. Offered only where `wslDistro()`
      (`src/machine.ts`) names one: upstream's platform is WSL and `WSL_DISTRO_NAME` is set.
+  3. Updating itself on a cold start: `scripts/fork-update.sh`, below.
 - `origin` is this fork, `upstream` is RegiByte's. A worker's worktree is cut from `origin/wsl-linux`, and its work
   has landed once merged into `wsl-linux` here.
 
@@ -28,12 +29,21 @@ beyond that. Nothing here changes how the tower behaves on a Mac.
 
 ## Updating to a new upstream release
 
-Never `tower update`: it checks the tag out detached and drops this fork's commits. Instead:
+Never `tower update`: it checks the tag out detached and drops this fork's commits.
+
+It happens on its own when the tower starts from cold. The Windows launcher runs `scripts/fork-update.sh due`, and
+when that says an update is due (every daemon down, the checkout clean on `wsl-linux`, a newer release upstream) it
+runs `scripts/fork-update.sh run` in a minimised window before `tower up`. That does the steps below except the page
+boot, and puts everything back if one fails; it then keeps a draft on the floor saying where it stopped, which is the
+prompt for doing it by hand. It also keeps one when the new releases' CHANGELOG asks for a config change. Its output
+is `~/.tower/fork-update.log`, and the branch before each update is kept as `backup/wsl-linux-<old tag>`.
+
+By hand:
 
 ```sh
 git fetch --tags upstream
 git rebase --onto <new tag> <old tag> wsl-linux
-npm ci && npm run typecheck && npm test && npm run test:page-boot
+npm ci && npm run typecheck && npm test && npm run test:page-boot   # page boot: Chrome at $CHROME
 tower down tower && tower up tower
 git push --force-with-lease origin wsl-linux
 ```
